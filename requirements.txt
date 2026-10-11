@@ -1,0 +1,7 @@
+torch>=2.2
+numpy>=1.26,<3
+opencv-python>=4.8
+mss>=9.0
+pydirectinput>=1.0.4
+PyYAML>=6.0
+tqdm>=4.66
