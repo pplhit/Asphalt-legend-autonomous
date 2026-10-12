@@ -10,13 +10,14 @@ from pathlib import Path
 import cv2
 from asphalt_vls.config import load_config
 from asphalt_vls.vision import preprocess
-from asphalt_vls.windows import WindowCapture, game_focused, pressed
+from asphalt_vls.windows import WindowCapture, game_focused, pressed, mouse_steering
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', default='config.yaml')
     parser.add_argument('--data', default='data')
+    parser.add_argument('--control', choices=['keyboard','mouse'], default='keyboard')
     args = parser.parse_args()
     cfg = load_config(args.config)
     session = Path(args.data) / 'sessions' / datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -24,7 +25,7 @@ def main():
     interval = 1.0 / cfg['game']['fps_record']
     cap = WindowCapture()
     recording, last_f8, count = False, False, 0
-    print('Focus game; F8 toggles recording; END quits. Manual Drive, TouchDrive OFF.')
+    print('Focus game; F8 toggles recording; END quits. Control:', args.control)
     print('Start before race, record multiple complete laps and recovery maneuvers.')
     try:
         with (session/'labels.csv').open('w', newline='', encoding='utf-8') as f:
@@ -50,9 +51,12 @@ def main():
                 next_time = now + interval
                 frame = cap.grab_game_window()
                 gray = preprocess(frame, cfg)
-                left = pressed('a')
-                right = pressed('d')
-                steer = int(right) - int(left)
+                if args.control == 'mouse':
+                    steer = mouse_steering(cfg)
+                else:
+                    left = pressed(cfg['game']['steer_left_key'])
+                    right = pressed(cfg['game']['steer_right_key'])
+                    steer = int(right) - int(left)
                 relative = f'frames/{count:07d}.png'
                 cv2.imwrite(str(session / relative), gray)
                 writer.writerow([relative, f'{now:.6f}', steer,
