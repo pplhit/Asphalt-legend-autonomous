@@ -6,6 +6,10 @@ game:
   fps_record: 10
   fps_control: 10
   steer_deadzone: 0.15
+  # Mouse mode: [x, y] in game client-relative coordinates (0..1).
+  mouse_left_point: [0.25, 0.75]
+  mouse_right_point: [0.75, 0.75]
+  mouse_center_deadzone: 0.04
   steer_hold_seconds: 0.10
   max_frame_age_seconds: 0.25
   max_infer_seconds: 0.20
