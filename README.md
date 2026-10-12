@@ -43,3 +43,31 @@ Each patch transforms 9→4, 36→6, and 54→8. `sim-vls` verifies the exact im
 - `examples/my_vls_backend.py`: physical-backend integration stub.
 
 No promise of successful autonomous completion is made without collecting track-specific data and measuring closed-loop performance.
+
+## Asphalt 7 mouse steering (Windows)
+
+For games controlled by **holding the left mouse button on the left/right half
+of the game window**, use the optional mouse mode:
+
+```powershell
+python record.py --control mouse --data E:\Asphalt_Dataset
+python inspect_data.py --data E:\Asphalt_Dataset --out E:\Asphalt_Dataset\preview.png
+python train.py --data E:\Asphalt_Dataset --out E:\Asphalt_Models\track1
+python drive.py --control mouse --checkpoint E:\Asphalt_Models\track1\best.pt --backend digital
+```
+
+Recording labels are -1 / 0 / +1 for mouse held in left half / released (or
+center deadzone) / held in right half of the **foreground game client area**.
+Default autonomous hold points in `config.yaml` are `[0.25,0.75]` and
+`[0.75,0.75]`; these are fractions of the client width and height, **not pixels**.
+Change them if the game's touch-control hit regions differ. `--control keyboard`
+remains the default. Mouse mode intentionally does not use `--throttle`.
+
+F8 toggles recording or arming; End exits; losing game focus disarms and
+releases the held mouse button. Test with `drive.py` in an offline/private
+permitted environment and be ready to press End. If the game window is not
+recognized, update `game.title_keywords` for its actual window title; adding
+generic names like "TapTap" may match the launcher rather than the game.
+Mouse events sent by `pydirectinput` may not be accepted by every Android
+emulator: verify compatibility before collecting substantial data. Switching
+the game from keyboard to mouse control requires **new training recordings**.
