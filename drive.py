@@ -12,7 +12,7 @@ from asphalt_vls.config import load_config
 from asphalt_vls.model import TinyVLSCNN, SimulatedVLSBackend
 from asphalt_vls.vision import preprocess, to_tensor
 from asphalt_vls.windows import WindowCapture, game_focused, pressed
-from asphalt_vls.control import KeyController, KeyboardWatchdog
+from asphalt_vls.control import KeyController, MouseController, KeyboardWatchdog
 
 
 def load_plugin(spec):
@@ -27,6 +27,7 @@ def main():
     p.add_argument('--backend',choices=['digital','sim-vls','hardware'],default='digital')
     p.add_argument('--vls-plugin',default='')
     p.add_argument('--confidence',type=float,default=0.53)
+    p.add_argument('--control',choices=['keyboard','mouse'],default='keyboard')
     p.add_argument('--throttle',action='store_true',help='Hold W while model is armed; otherwise steering-only')
     p.add_argument('--preview',action='store_true',help='DO NOT use while controlling (takes game focus)')
     a=p.parse_args()
@@ -59,14 +60,16 @@ def main():
             probs=logits.softmax(-1).squeeze(0).cpu().numpy()
         return probs
 
-    controller=KeyController()
+    if a.control=='mouse' and a.throttle:
+        p.error('--throttle is available only in keyboard mode')
+    controller=MouseController(cfg) if a.control=='mouse' else KeyController(keys=(cfg['game']['steer_left_key'],cfg['game']['steer_right_key'],cfg['game']['throttle_key']))
     watchdog=KeyboardWatchdog(controller, timeout=0.5)
     cap=WindowCapture()
     armed=False; previous_f8=False
     last_action='not armed'
     period=1./cfg['game']['fps_control']
     print('DISARMED. Focus game window, Manual Drive/TouchDrive OFF. F8 arm/disarm. END STOP.')
-    print('Backend:',a.backend, '| throttle:',a.throttle)
+    print('Backend:',a.backend, '| control:',a.control, '| throttle:',a.throttle)
     try:
         while True:
             if pressed('end'):
@@ -110,8 +113,8 @@ def main():
             # If classifier is uncertain, do NOT turn blindly.
             desired=set()
             if confidence >= a.confidence:
-                if choice==0: desired.add(cfg['game']['steer_left_key'])
-                if choice==2: desired.add(cfg['game']['steer_right_key'])
+                if choice==0: desired.add('left' if a.control=='mouse' else cfg['game']['steer_left_key'])
+                if choice==2: desired.add('right' if a.control=='mouse' else cfg['game']['steer_right_key'])
             if a.throttle:
                 desired.add(cfg['game']['throttle_key'])
             # Max steering hold is effectively bounded by loop period and watchdog.
